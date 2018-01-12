@@ -38,23 +38,7 @@ from pyquil.quil import Measurement
 from collections import namedtuple
 
 
-def to_latex(circuit):
-    """
-    Translates a given pyquil Program to a TikZ picture in a Latex document.
-
-    :param Program circuit: The circuit to be drawn, represented as a pyquil program.
-
-    :return: LaTeX document string which can be compiled.
-    :rtype: string
-    """
-    settings = get_default_settings()
-    text = header(settings)
-    text += body(circuit, settings)
-    text += footer()
-    return text
-
-
-command = namedtuple("command", ("gate", "lines", "ctrl_lines", "used_lines"))
+command = namedtuple("command", ("gate", "lines", "ctrl_lines", "used_lines", "id"))
 """command is used as an intermediate representation to hold meta-information about the circuit, and dependencies."""
 ALLOCATE = "ALLOCATE"
 CZ = "CZ"
@@ -63,6 +47,24 @@ Z = "Z"
 SWAP = "SWAP"
 MEASURE = "MEASURE"
 X = "X"
+
+
+def to_latex(circuit, settings=None):
+    """
+    Translates a given pyquil Program to a TikZ picture in a Latex document.
+
+    :param Program circuit: The circuit to be drawn, represented as a pyquil program.
+    :param dict settings: An optional dictionary with settings for drawing the circuit. See `get_default_settings`
+     in `latex_config` for more information about what settings should contain.
+    :return: LaTeX document string which can be compiled.
+    :rtype: string
+    """
+    if settings is None:
+        settings = get_default_settings()
+    text = header(settings)
+    text += body(circuit, settings)
+    text += footer()
+    return text
 
 
 def body(circuit, settings):
@@ -88,7 +90,7 @@ def body(circuit, settings):
         for qubit in qubits:
             qubit_instruction_mapping[qubit.index] = []
     for k, v in list(qubit_instruction_mapping.items()):
-        v.append(command(ALLOCATE, [k], [], [k]))
+        v.append(command(ALLOCATE, [k], [], [k], k))
 
     for inst in circuit:
         qubits = [qubit.index for qubit in inst.qubits]
@@ -96,7 +98,7 @@ def body(circuit, settings):
         # If this is a single qubit instruction.
         if len(qubits) == 1:
             for qubit in qubits:
-                qubit_instruction_mapping[qubit].append(command(gate, [qubit], [], [qubit]))
+                qubit_instruction_mapping[qubit].append(command(gate, [qubit], [], [qubit], qubit))
 
         # If this is a many-qubit operation.
         else:
@@ -113,13 +115,13 @@ def body(circuit, settings):
                 if gate == CZ:
                     ctrl_lines = list(all_lines)
                     ctrl_lines.remove(qubits[-1])
-                    qubit_instruction_mapping[qubit].append(command(Z, qubits[-1:], ctrl_lines, explicit_lines))
+                    qubit_instruction_mapping[qubit].append(command(Z, qubits[-1:], ctrl_lines, explicit_lines, None))
                 elif gate == CNOT:
                     ctrl_lines = list(all_lines)
                     ctrl_lines.remove(qubits[-1])
-                    qubit_instruction_mapping[qubit].append(command(X, qubits[-1:], ctrl_lines, explicit_lines))
+                    qubit_instruction_mapping[qubit].append(command(X, qubits[-1:], ctrl_lines, explicit_lines, None))
                 else:
-                    qubit_instruction_mapping[qubit].append(command(gate, all_lines, [], explicit_lines))
+                    qubit_instruction_mapping[qubit].append(command(gate, all_lines, [], explicit_lines, None))
 
     # Zero index, and remove gaps in spacing.
     relabeled_circuit = {}
@@ -318,14 +320,15 @@ class CircuitTikzGenerator(object):
                                   swap_style=swap_style)
         gate_str += self._line(lines[0], lines[1])
 
-        if len(ctrl_lines) > 0:
-            for ctrl in ctrl_lines:
-                gate_str += self._phase(ctrl, self.pos[lines[0]])
-                if ctrl > lines[1] or ctrl < lines[0]:
-                    closer_line = lines[0]
-                    if ctrl > lines[1]:
-                        closer_line = lines[1]
-                    gate_str += self._line(ctrl, closer_line)
+        # For controlled SWAP gates.
+        # if len(ctrl_lines) > 0:
+        #     for ctrl in ctrl_lines:
+        #         gate_str += self._phase(ctrl, self.pos[lines[0]])
+        #         if ctrl > lines[1] or ctrl < lines[0]:
+        #             closer_line = lines[0]
+        #             if ctrl > lines[1]:
+        #                 closer_line = lines[1]
+        #             gate_str += self._line(ctrl, closer_line)
 
         all_lines = ctrl_lines + lines
         new_pos = self.pos[lines[0]] + delta_pos + gate_width
@@ -341,7 +344,7 @@ class CircuitTikzGenerator(object):
 
         :param lines: List of length 1 denoting the target qubit of the NOT / X gate.
         :type: list[int]
-        :param List of qubit lines which act as controls.
+        :param ctrl_lines: List of qubit lines which act as controls.
         :type: list[int]
         """
         line = lines[0]
@@ -551,8 +554,9 @@ class CircuitTikzGenerator(object):
                      ).format(gate_height, self._op(l, offset=1), pos + gate_width / 2., l)
             node3 = node_str.format(self._op(l, offset=2), pos + gate_width, l)
             tex_str += node1 + node2 + node3
-            if l not in gate_lines:
-                tex_str += self._line(self.op_count[l] - 1, self.op_count[l], line=l)
+            # For arbitrary control gates
+            # if l not in gate_lines:
+            #     tex_str += self._line(self.op_count[l] - 1, self.op_count[l], line=l)
         tex_str += ("\n\\draw[operator,edgestyle,outer sep={width}cm]"
                     " ([yshift={half_height}cm]{op1})"
                     " rectangle ([yshift=-{half_height}cm]{op2}) node[pos=.5]{{\\verb|{name}|}};"

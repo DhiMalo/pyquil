@@ -36,10 +36,10 @@ def get_default_settings():
     Return the default settings for generating LaTeX circuits.
 
     settings is a dictionary with the following keys:
-      gate_shadow:
-      lines:
-      gates:
-      control:
+      gate_shadow: Whether or not to apply shadowing to the gates.
+      lines: Settings for the lines.
+      gates: Settings for the gates.
+      control: Settings for the control symbols.
 
     :return: Default circuit settings
     :rtype: dict
