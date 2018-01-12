@@ -33,7 +33,7 @@
 
 from copy import copy
 
-from pyquil.latex_config import get_default_settings, header, footer
+from pyquil.latex.latex_config import get_default_settings, header, footer
 from pyquil.quil import Measurement
 from collections import namedtuple
 
