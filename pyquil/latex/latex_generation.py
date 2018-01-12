@@ -112,12 +112,12 @@ def body(circuit, settings):
             for i, qubit in enumerate(all_lines):
                 if gate == CZ:
                     ctrl_lines = list(all_lines)
-                    ctrl_lines.remove(qubits[0])
-                    qubit_instruction_mapping[qubit].append(command(Z, qubits[:1], ctrl_lines, explicit_lines))
+                    ctrl_lines.remove(qubits[-1])
+                    qubit_instruction_mapping[qubit].append(command(Z, qubits[-1:], ctrl_lines, explicit_lines))
                 elif gate == CNOT:
                     ctrl_lines = list(all_lines)
-                    ctrl_lines.remove(qubits[0])
-                    qubit_instruction_mapping[qubit].append(command(X, qubits[:1], ctrl_lines, explicit_lines))
+                    ctrl_lines.remove(qubits[-1])
+                    qubit_instruction_mapping[qubit].append(command(X, qubits[-1:], ctrl_lines, explicit_lines))
                 else:
                     qubit_instruction_mapping[qubit].append(command(gate, all_lines, [], explicit_lines))
 

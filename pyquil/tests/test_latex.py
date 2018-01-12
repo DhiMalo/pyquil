@@ -1,6 +1,6 @@
 from pyquil.quil import Program
 from pyquil.gates import X, CZ, SWAP, MEASURE, CNOT
-from pyquil.latex_generation import to_latex
+from pyquil.latex import to_latex
 
 
 def test_to_latex():
